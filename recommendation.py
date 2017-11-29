@@ -2,6 +2,7 @@
 
 from User import User
 from random import randint
+from random import choice
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -17,6 +18,7 @@ class Recommendation:
         # Dans la variable 'movies' se trouve la correspondance entre l'identifiant d'un film et le film
         # Dans la variables 'movies_list' se trouve les films populaires qui sont vus par les utilisateurs
         self.movies = load_movies()
+        self.movies_dict = { m.id : m for m in self.movies}
         self.movies_list = []
 
         # Importe la liste des notations
@@ -74,9 +76,9 @@ class Recommendation:
 
     # Pose une question à l'utilisateur
     def ask_question(self, user):
-        films = ["Le seigneur des anneaux", "Harry Potter"]
-        film_demande = films[randint(0,1)]
-        return "Avez vous aimé " + film_demande
+        identifiant_alea = choice(self.movies_list)
+        film_demande = self.movies_dict[identifiant_alea]
+        return "Avez vous aimé le film " + film_demande.title
 
     # Calcule la similarité entre 2 utilisateurs
     @staticmethod
