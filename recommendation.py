@@ -72,6 +72,12 @@ class Recommendation:
 
     # Affiche la recommandation pour l'utilisateur
     def make_recommendation(self, user):
+        similar_users = self.compute_all_similarities(user)
+        similar_users.sort(key=lambda ur: ur[1], reverse=True)
+        if len(similar_users)>0:
+            similar_user = similar_users[0][0]
+            recommended_movies = [self.movies_dict[f].title for f in similar_user.good_ratings]
+            return "-".join(recommended_movies)
         return "Vous n'avez pas de recommandation pour le moment."
 
     # Pose une question à l'utilisateur
@@ -84,8 +90,22 @@ class Recommendation:
     # Calcule la similarité entre 2 utilisateurs
     @staticmethod
     def get_similarity(user_a, user_b):
-        return 0
+        score = 0
+        for film_id in user_a.good_ratings:
+            if film_id in user_b.good_ratings:
+                score += 1
+            elif film_id in user_b.bad_ratings:
+                score -= 1
+        for film_id in user_a.bad_ratings:
+            if film_id in user_b.good_ratings:
+                score -= 1
+            elif film_id in user_b.bad_ratings:
+                score += 1
+        for film_id in user_a.neutral_ratings:
+            if film_id in user_b.neutral_ratings:
+                score += 1
+        return score / user_a.get_norm()
 
     # Calcule la similarité entre un utilisateur et tous les utilisateurs de tests
     def compute_all_similarities(self, user):
-        return []
+        return [(u,self.get_similarity(user,u)) for u in self.users.values()]
