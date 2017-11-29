@@ -46,12 +46,17 @@ class User:
         # Si on a rien demandé à l'utilisateur alors on ne fait rien
         if self.latest_movie_asked is None:
             return
-
         # On enlève les espaces en trop et on met tout le message en miniscule
         clean_message = message.lower().strip()
-        self.latest_movie_asked = None
+        if clean_message in ["yep", "oui", "yes", "sure", "si"]:
+            self.answer_yes()
+        elif clean_message in ["no", "non", "trop pas", "pas trop"]:
+            self.answer_no()
+        else:
+            self.answer_neutral()
 
-        # Il faut traiter ici le message
+        print(self.latest_movie_asked, self.good_ratings,self.bad_ratings, self.neutral_ratings)
+        self.latest_movie_asked = None
         return
 
     # Donne la norme de l'utilisateur
