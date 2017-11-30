@@ -53,6 +53,7 @@ $(document).ready(function() {
                 input.attr('placeholder', 'Chatflix écrit...');
                 chatbotMessage.html(botMessage);
                 scrollToMessage();
+                input.select();
             }, 50);
 
             setTimeout(function() {
@@ -65,6 +66,7 @@ $(document).ready(function() {
                 input.removeAttr('disabled');
                 submit.removeClass('disabled');
                 submit.removeAttr('disabled');
+                input.select();
             }, 500);
 
         } else {
@@ -74,6 +76,7 @@ $(document).ready(function() {
             chatbotMessage.html(userMessage);
             scrollToMessage();
             input.val('');
+            input.select();
 
         }
     }
