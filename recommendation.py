@@ -125,7 +125,7 @@ class Recommendation:
         identifiant_alea = choice(self.movies_list)
         film_demande = self.movies_dict[identifiant_alea]
         user.set_question(identifiant_alea)
-        return "Avez vous aimé le film " + film_demande.title
+        return "Avez vous aimé le film " + film_demande.title + "(répondez par oui ou non ou mettez une note de 1 à 5)"
 
     # Calcule la similarité entre 2 utilisateurs
     @staticmethod

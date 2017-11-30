@@ -48,7 +48,9 @@ class User:
             return
         # On enlève les espaces en trop et on met tout le message en miniscule
         clean_message = message.lower().strip()
-        if clean_message in ["yep", "oui", "yes", "sure", "si"]:
+        if clean_message in ["1", "2", "3", "4", "5"]:
+            self.ratings[self.latest_movie_asked] = int(clean_message)
+        elif clean_message in ["yep", "oui", "yes", "sure", "si"]:
             self.answer_yes()
         elif clean_message in ["no", "non", "trop pas", "pas trop"]:
             self.answer_no()
