@@ -74,10 +74,23 @@ class Recommendation:
     def make_recommendation(self, user):
         similar_users = self.compute_all_similarities(user)
         similar_users.sort(key=lambda ur: ur[1], reverse=True)
-        if len(similar_users)>0:
+        if len(similar_users)>4:
+            prefered_movies = { f : 1 for f in similar_users[0][0].good_ratings}
+            for u in similar_users[1:5]:
+                for f in u.good_ratings:
+                    if f in prefered_movies.keys():
+                        prefered_movies[f] += 1
+                    else:
+                        prefered_movies[f] = 1
+            prefered_movies = sorted([{"movie":f, "rate":nb} for f,nb in prefered_movies ],
+                                     key=lambda film_rate: film_rate[1],
+                                     reverse=True)
+            recommended_movies = [self.movies_dict[f["movie"]].title for f in prefered_movies if f["rate"]>1]
+            return ";".join(recommended_movies)
+        elif len(similar_users)>0:
             similar_user = similar_users[0][0]
             recommended_movies = [self.movies_dict[f].title for f in similar_user.good_ratings]
-            return "-".join(recommended_movies)
+            return ";".join(recommended_movies)
         return "Vous n'avez pas de recommandation pour le moment."
 
     # Pose une question à l'utilisateur
