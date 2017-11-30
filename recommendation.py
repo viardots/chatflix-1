@@ -19,6 +19,33 @@ class Recommendation:
         # Dans la variables 'movies_list' se trouve les films populaires qui sont vus par les utilisateurs
         self.movies = load_movies()
         self.movies_dict = { m.id : m for m in self.movies}
+        # Construit un dictionnaire de genre
+        self.vect_genre=[]
+        for m in self.movies:
+            vect= [ m.unknown,
+                    m.action,
+                    m.adventure,
+                    m.animation,
+                    m.children,
+                    m.comedy,
+                    m.crime,
+                    m.documentary,
+                    m.drama,
+                    m.fantasy,
+                    m.film_noir,
+                    m.horror,
+                    m.musical,
+                    m.mystery,
+                    m.romance,
+                    m.sci_fi,
+                    m.thriller,
+                    m.war,
+                    m.western]
+            self.vect_genre.append(vect)
+        self.vect_genre = np.array(self.vect_genre)
+        self.kmeans = KMeans(n_clusters=10)
+        self.kmeans.fit_predict(self.vect_genre)
+
         self.movies_list = []
 
         # Importe la liste des notations
