@@ -40,7 +40,10 @@ class User:
         self.latest_movie_asked = movie_number
         if self.questions_before_recommendation is None or self.questions_before_recommendation <= 0:
             self.questions_before_recommendation = 5
-
+    # Si l'utilisateur a donné une note
+    def answer_number(self, note):
+        self.ratings[self.latest_movie_asked] = note
+        self.questions_before_recommendation -= 1
     # Traite le message de l'utilisateur
     def give_message(self, message):
         # Si on a rien demandé à l'utilisateur alors on ne fait rien
@@ -49,7 +52,7 @@ class User:
         # On enlève les espaces en trop et on met tout le message en miniscule
         clean_message = message.lower().strip()
         if clean_message in ["1", "2", "3", "4", "5"]:
-            self.ratings[self.latest_movie_asked] = int(clean_message)
+            self.answer_number(int(clean_message))
         elif clean_message in ["yep", "oui", "yes", "sure", "si"]:
             self.answer_yes()
         elif clean_message in ["no", "non", "trop pas", "pas trop"]:

@@ -7,7 +7,7 @@ from random import choice
 import numpy as np
 from sklearn.cluster import KMeans
 
-from movielens import load_movies, load_simplified_ratings
+from movielens import load_movies, load_simplified_ratings, load_ratings
 
 
 class Recommendation:
@@ -19,6 +19,7 @@ class Recommendation:
         # Dans la variables 'movies_list' se trouve les films populaires qui sont vus par les utilisateurs
         self.movies = load_movies()
         self.movies_dict = { m.id : m for m in self.movies}
+        self.movies_id = {m.id : i for i,m in enumerate(self.movies)}
         # Construit un dictionnaire de genre
         self.vect_genre=[]
         for m in self.movies:
@@ -44,15 +45,16 @@ class Recommendation:
             self.vect_genre.append(vect)
         self.vect_genre = np.array(self.vect_genre)
         self.kmeans = KMeans(n_clusters=10)
-        self.kmeans.fit_predict(self.vect_genre)
-
+        self.fit = self.kmeans.fit_predict(self.vect_genre)
         self.movies_list = []
+
 
         # Importe la liste des notations
         # Dans le tableau 'ratings' se trouve un objet avec un attribut 'movie' contenant l'identifiant du film, un
         # attribut 'user' avec l'identifiant de l'utilisateur et un attribut 'is_appreciated' pour savoir si oui ou non
         # l'utilisateur aime le film
-        self.ratings = load_simplified_ratings()
+        #self.ratings = load_simplified_ratings()
+        self.ratings = load_ratings()
 
         # Les utilisateurs du fichier 'ratings-popular-simplified.csv' sont stockés dans 'test_users'
         self.test_users = {}
@@ -61,6 +63,9 @@ class Recommendation:
 
         # Lance le traitement des notations
         self.process_ratings_to_users()
+
+        self.user_cluster_matrix = [self.process_normal_cluster(u) for u in self.test_users.values()]
+
 
     # Traite les notations
     # Crée un utilisateur de test pour chaque utilisateur dans le fichier
@@ -74,7 +79,7 @@ class Recommendation:
                 else:
                     user.bad_ratings.append(rating.movie)
             elif rating.score is not None:
-                user.ratings.append(rating)
+                user.ratings[rating.movie] = int(rating.score)
             self.movies_list.append(rating.movie)
 
     # Enregistre un utilisateur de test s'il n'existe pas déjà et le retourne
@@ -97,28 +102,39 @@ class Recommendation:
             movies_list.append(self.movies[movie_number].title)
         return movies_list
 
+    # Calcule vecteur normalise pour un utilisateur
+    def process_normal_cluster(self, user):
+        # Cluster vide
+        clusters = [[] for _ in range(10)]
+        rate_mean = 0
+        rate_count = 0
+        for m, rate in user.ratings.items():
+            cluster_movie = self.fit[self.movies_id[m]]
+            clusters[cluster_movie].append(rate)
+            rate_mean += rate
+            rate_count += 1
+        if rate_count!=0:
+            rate_mean = rate_mean / rate_count
+        clusters_mean = [(np.mean(rates) - rate_mean) if rates else 0 for rates in clusters]
+        user.cluster_prefs = clusters_mean
+        return clusters_mean
+
+    # Calcule la note moyenne d'un groupe d'utilisateurs pour un film donné
+    def rate_movie(self, movie, users):
+        rates_movie =[ u.ratings[movie.id] for u in users if movie.id in u.ratings.keys()]
+        return np.mean(rates_movie) if rates_movie else 0
     # Affiche la recommandation pour l'utilisateur
     def make_recommendation(self, user):
+        self.process_normal_cluster(user)
+        # Similarité d'utilisateurs
         similar_users = self.compute_all_similarities(user)
         similar_users.sort(key=lambda ur: ur[1], reverse=True)
-        if len(similar_users)>4:
-            prefered_movies = { f : 1 for f in similar_users[0][0].good_ratings}
-            for u in similar_users[1:5]:
-                for f in u.good_ratings:
-                    if f in prefered_movies.keys():
-                        prefered_movies[f] += 1
-                    else:
-                        prefered_movies[f] = 1
-            prefered_movies = sorted([{"movie":f, "rate":nb} for f,nb in prefered_movies ],
-                                     key=lambda film_rate: film_rate[1],
-                                     reverse=True)
-            recommended_movies = [self.movies_dict[f["movie"]].title for f in prefered_movies if f["rate"]>1]
-            return ";".join(recommended_movies)
-        elif len(similar_users)>0:
-            similar_user = similar_users[0][0]
-            recommended_movies = [self.movies_dict[f].title for f in similar_user.good_ratings]
-            return ";".join(recommended_movies)
-        return "Vous n'avez pas de recommandation pour le moment."
+        similar_users = [u for u,_ in similar_users[0:50]]
+        rates_movies = [(m.id,self.rate_movie(m,similar_users)) for m in self.movies]
+        rates_movies.sort(key=lambda rm: rm[1], reverse=True)
+        rates_movie=[m for m,rate in rates_movies if m not in user.ratings.keys()]
+        recommended_movies = [self.movies_dict[f].title for f in rates_movie[0:5]]
+        return ";".join(recommended_movies)
 
     # Pose une question à l'utilisateur
     def ask_question(self, user):
@@ -130,22 +146,13 @@ class Recommendation:
     # Calcule la similarité entre 2 utilisateurs
     @staticmethod
     def get_similarity(user_a, user_b):
-        score = 0
-        for film_id in user_a.good_ratings:
-            if film_id in user_b.good_ratings:
-                score += 1
-            elif film_id in user_b.bad_ratings:
-                score -= 1
-        for film_id in user_a.bad_ratings:
-            if film_id in user_b.good_ratings:
-                score -= 1
-            elif film_id in user_b.bad_ratings:
-                score += 1
-        for film_id in user_a.neutral_ratings:
-            if film_id in user_b.neutral_ratings:
-                score += 1
-        return score / user_a.get_norm()
+        prod_scalaire = sum([user_a.cluster_prefs[i]*user_b.cluster_prefs[i] for i in range(len(user_a.cluster_prefs))])
+        norm_user_a = sum([rate**2 for rate in user_a.cluster_prefs])
+        norm_user_b = sum([rate ** 2 for rate in user_b.cluster_prefs])
+        if prod_scalaire == 0 :
+            return 0
+        return prod_scalaire/(norm_user_a*norm_user_b)
 
     # Calcule la similarité entre un utilisateur et tous les utilisateurs de tests
     def compute_all_similarities(self, user):
-        return [(u,self.get_similarity(user,u)) for u in self.users.values()]
+        return [(u,self.get_similarity(user,u)) for u in self.test_users.values()]
